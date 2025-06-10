@@ -3,3 +3,8 @@ openai==0.28
 requests==2.31.0
 beautifulsoup4==4.12.3
 telegram
+flask
+python-docx
+docx
+pdfplumber
+pytesseract
