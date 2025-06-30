@@ -24,11 +24,12 @@ from telegram.ext import (
     MessageHandler,
     Filters,
     ConversationHandler,
+)
+
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-)
 
 # === ЗАМЕНА GPT НА GIGACHAT ===
 def query_gigachat(prompt):
