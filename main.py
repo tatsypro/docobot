@@ -1,5 +1,3 @@
-# main.py
-
 import os
 import sys
 import re
@@ -25,8 +23,6 @@ from telegram.ext import (
     Filters,
     ConversationHandler,
 )
-
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
