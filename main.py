@@ -42,10 +42,6 @@ GIGACHAT_AUTH_KEY = base64.b64encode(
     f"{GIGACHAT_CLIENT_ID}:{GIGACHAT_CLIENT_SECRET}".encode("utf-8")
 ).decode("utf-8")
 
-GIGACHAT_AUTH_KEY = base64.b64encode(
-    f"{GIGACHAT_CLIENT_ID}:{GIGACHAT_CLIENT_SECRET}".encode("utf-8")
-).decode("utf-8")
-
 # === ЗАМЕНА GPT НА GIGACHAT ===
 def query_gigachat(prompt):
     auth_url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
@@ -55,7 +51,8 @@ def query_gigachat(prompt):
         "Authorization": f"Basic {GIGACHAT_AUTH_KEY}",
         "RqUID": os.urandom(16).hex(),
         "Content-Type": "application/x-www-form-urlencoded"
-    }
+    }   
+    
     data_auth = {
         "scope": "GIGACHAT_API_PERS",
         "grant_type": "client_credentials"
