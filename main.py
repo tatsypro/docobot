@@ -24,8 +24,27 @@ from telegram.ext import (
     ConversationHandler,
 )
 from dotenv import load_dotenv
+import base64
 
 load_dotenv()
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+YANDEX_API_KEY = os.getenv("YANDEX_API_KEY")
+OPENAI_KEY = os.getenv("OPENAI_KEY")
+IAM_TOKEN = os.getenv("IAM_TOKEN")
+FOLDER_ID = os.getenv("FOLDER_ID")
+GIGACHAT_CLIENT_ID = os.getenv("GIGACHAT_CLIENT_ID")
+GIGACHAT_CLIENT_SECRET = os.getenv("GIGACHAT_CLIENT_SECRET")
+
+import base64
+
+GIGACHAT_AUTH_KEY = base64.b64encode(
+    f"{GIGACHAT_CLIENT_ID}:{GIGACHAT_CLIENT_SECRET}".encode("utf-8")
+).decode("utf-8")
+
+GIGACHAT_AUTH_KEY = base64.b64encode(
+    f"{GIGACHAT_CLIENT_ID}:{GIGACHAT_CLIENT_SECRET}".encode("utf-8")
+).decode("utf-8")
 
 # === ЗАМЕНА GPT НА GIGACHAT ===
 def query_gigachat(prompt):
@@ -41,7 +60,8 @@ def query_gigachat(prompt):
         "scope": "GIGACHAT_API_PERS",
         "grant_type": "client_credentials"
     }
-    auth_response = requests.post(auth_url, headers=headers_auth, data=data_auth)
+    auth_response = requests.post(auth_url, headers=headers_auth, data=data_auth, verify=False)
+    print("auth_response.text:", auth_response.text)
     access_token = auth_response.json().get("access_token")
 
     headers_chat = {
@@ -55,7 +75,8 @@ def query_gigachat(prompt):
         "top_p": 0.9,
         "n": 1
     }
-    chat_response = requests.post(chat_url, headers=headers_chat, json=payload)
+    chat_response = requests.post(chat_url, headers=headers_chat, json=payload, verify=False)
+    print("chat_response.text:", chat_response.text)
     return chat_response.json()['choices'][0]['message']['content']
 
 # 🌐 Flask webhook
@@ -444,7 +465,7 @@ def generate_all_documents(update, context):
     )
 
 def main():
-    updater = Updater(TOKEN, use_context=True)
+    updater = Updater(TELEGRAM_TOKEN, use_context=True)
     dp = updater.dispatcher
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -462,3 +483,6 @@ def main():
     dp.add_handler(conv)
     updater.start_polling()
     updater.idle()
+
+if __name__ == "__main__":
+    main()

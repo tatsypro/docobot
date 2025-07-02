@@ -1,3 +1,14 @@
+
+*.docx
+*.pdf
+*.zip
+*.tar
+*.tar.gz
+
+old_backup/
+.DS_Store
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
