@@ -4,6 +4,8 @@ import re
 import time
 import requests
 import threading
+import json
+import uuid
 from flask import Flask, request as flask_request
 from bs4 import BeautifulSoup
 from PIL import Image
@@ -28,6 +30,7 @@ import base64
 
 load_dotenv()
 
+GIGACHAT_AUTH_KEY = "NDEwMjhhYzQtZGRkMS00MDhiLTg3NTktNzE4NmJhOWM4ZWZhOjE3ZTNlOTZjLTE2MzQtNDdiYy04MDUxLWExOWJhYmQ3OTY3Zg=="
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 YANDEX_API_KEY = os.getenv("YANDEX_API_KEY")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
@@ -36,11 +39,20 @@ FOLDER_ID = os.getenv("FOLDER_ID")
 GIGACHAT_CLIENT_ID = os.getenv("GIGACHAT_CLIENT_ID")
 GIGACHAT_CLIENT_SECRET = os.getenv("GIGACHAT_CLIENT_SECRET")
 
-import base64
+print("ID:", GIGACHAT_CLIENT_ID)
+print("SECRET:", GIGACHAT_CLIENT_SECRET)
+print("AUTH_KEY:", GIGACHAT_AUTH_KEY)
 
-GIGACHAT_AUTH_KEY = base64.b64encode(
-    f"{GIGACHAT_CLIENT_ID}:{GIGACHAT_CLIENT_SECRET}".encode("utf-8")
-).decode("utf-8")
+def add_markdown_to_docx(document, text):
+    for line in text.split('\n'):
+        if line.startswith('# '):
+            document.add_heading(line[2:], level=1)
+        elif line.startswith('## '):
+            document.add_heading(line[3:], level=2)
+        elif line.startswith('- '):
+            document.add_paragraph(line[2:], style='List Bullet')
+        elif line.strip():
+            document.add_paragraph(line)
 
 # === ЗАМЕНА GPT НА GIGACHAT ===
 def query_gigachat(prompt):
@@ -49,17 +61,34 @@ def query_gigachat(prompt):
 
     headers_auth = {
         "Authorization": f"Basic {GIGACHAT_AUTH_KEY}",
-        "RqUID": os.urandom(16).hex(),
-        "Content-Type": "application/x-www-form-urlencoded"
-    }   
-    
-    data_auth = {
-        "scope": "GIGACHAT_API_PERS",
-        "grant_type": "client_credentials"
+        "RqUID": str(uuid.uuid4()),  # именно UUID, а не os.urandom
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
     }
+    data_auth = {
+        "scope": "GIGACHAT_API_PERS"
+    }
+    print("\n=== ЗАПРОС НА ТОКЕН ===")
+    print("auth_url:", auth_url)
+    print("headers_auth:", headers_auth)
+    print("data_auth:", data_auth)
+    print("=======================\n")
+
     auth_response = requests.post(auth_url, headers=headers_auth, data=data_auth, verify=False)
+
+    print("auth_response.status_code:", auth_response.status_code)
     print("auth_response.text:", auth_response.text)
-    access_token = auth_response.json().get("access_token")
+
+    access_token = None
+    try:
+        access_token = auth_response.json().get("access_token")
+    except Exception as e:
+        print("Ошибка разбора JSON:", e)
+        return "❌ Ошибка авторизации GigaChat (токен не получен)"
+
+    if not access_token:
+        print("Токен не получен! Проверь параметры запроса.")
+        return "❌ Ошибка авторизации GigaChat (токен не получен)"
 
     headers_chat = {
         "Authorization": f"Bearer {access_token}",
@@ -73,6 +102,7 @@ def query_gigachat(prompt):
         "n": 1
     }
     chat_response = requests.post(chat_url, headers=headers_chat, json=payload, verify=False)
+    print("chat_response.status_code:", chat_response.status_code)
     print("chat_response.text:", chat_response.text)
     return chat_response.json()['choices'][0]['message']['content']
 
@@ -426,15 +456,13 @@ def generate_all_documents(update, context):
             print(
                 f"[DEBUG] Промпт для GPT (обрезан до 1000 символов):\n{prompt[:1000]}..."
             )
-            prompt = system_message["content"] + "\n\n" + "\n".join(
-                [f"{m['role']}: {m['content']}" for m in history]
-            )
             gpt_reply = query_gigachat(prompt)
-            print(f"[DEBUG] Ответ GPT, первые 500 символов:\n{text[:500]}...")
+            print(f"[DEBUG] Ответ GPT, первые 500 символов:\n{gpt_reply[:500]}...")
+
             document = Document()
-            for para in text.strip().split("\n\n"):
-                document.add_paragraph(para.strip())
+            add_markdown_to_docx(document, gpt_reply)
             document.save(doc["name"])
+
             print(f"[DEBUG] Документ сохранён: {doc['name']}")
             with open(doc["name"], "rb") as f:
                 update.message.reply_document(f)
